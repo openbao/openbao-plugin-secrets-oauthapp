@@ -1,7 +1,11 @@
-# vault-plugin-secrets-oauthapp
+# openbao-plugin-secrets-oauthapp
 
-This is a standalone backend plugin for use with [HashiCorp
-Vault](https://github.com/hashicorp/vault).
+This is a standalone backend plugin for use with either
+[OpenBao](https://github.com/openbao/openbao) or
+[HashiCorp Vault](https://github.com/hashicorp/vault).
+It was originally written by
+[puppetlabs](https://github.com/puppetlabs/vault-plugin-secrets-oauthap)
+but is now maintined through the OpenBao project.
 
 This plugin provides a secure wrapper around OAuth 2 authorization code, refresh
 token, device code, and client credentials grant types, allowing a Vault client
@@ -10,11 +14,15 @@ negotiated OAuth 2 access token.
 
 ## Usage
 
-Once you have the binary, you will need to register the plugin with Vault.
+Once you have the binary, you will need to register the plugin with Vault
+or OpenBao.
 Follow [the instructions in the Vault
 documentation](https://www.vaultproject.io/docs/internals/plugins.html#plugin-registration)
+or [OpenBao
+documentation](https://openbao.org/docs/plugins/plugin-architecture/#plugin-registration)
 to add the plugin to the catalog. We will assume it is registered under the name
 `oauthapp`.
+For the examples we use the `vault` command line name.
 
 Enable the plugin at the path of your choosing:
 
