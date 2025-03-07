@@ -1,4 +1,4 @@
-module github.com/puppetlabs/vault-plugin-secrets-oauthapp/v3
+module github.com/openbao/openbao-plugin-secrets-oauthapp/v3
 
 go 1.18
 

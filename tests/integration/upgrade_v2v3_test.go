@@ -13,9 +13,9 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	backendv3 "github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/backend"
+	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/persistence"
 	backendv2 "github.com/puppetlabs/vault-plugin-secrets-oauthapp/v2/pkg/backend"
-	backendv3 "github.com/puppetlabs/vault-plugin-secrets-oauthapp/v3/pkg/backend"
-	"github.com/puppetlabs/vault-plugin-secrets-oauthapp/v3/pkg/persistence"
 	"github.com/stretchr/testify/require"
 )
 
