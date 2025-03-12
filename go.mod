@@ -16,7 +16,7 @@ require (
 	github.com/puppetlabs/leg/scheduler v0.3.0
 	github.com/puppetlabs/leg/timeutil v0.5.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/oauth2 v0.25.0
+	golang.org/x/oauth2 v0.28.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gotest.tools/gotestsum v1.9.0
 	k8s.io/utils v0.0.0-20230115233650-391b47cb4029
