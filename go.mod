@@ -9,7 +9,7 @@ require (
 	github.com/golangci/golangci-lint v1.64.6
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/golang-lru v0.6.0
+	github.com/hashicorp/golang-lru v1.0.2
 	github.com/openbao/openbao/api/v2 v2.2.0
 	github.com/openbao/openbao/sdk/v2 v2.2.0
 	github.com/puppetlabs/leg/errmap v0.1.1
