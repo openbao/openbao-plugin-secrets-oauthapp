@@ -18,7 +18,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.28.0
 	gopkg.in/square/go-jose.v2 v2.6.0
-	gotest.tools/gotestsum v1.9.0
+	gotest.tools/gotestsum v1.12.0
 	k8s.io/utils v0.0.0-20230115233650-391b47cb4029
 )
 
@@ -48,6 +48,7 @@ require (
 	github.com/ashanbrown/makezero v1.2.0 // indirect
 	github.com/aws/aws-sdk-go v1.44.95 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bitfield/gotestdox v0.2.2 // indirect
 	github.com/bkielbasa/cyclop v1.2.3 // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect
 	github.com/bombsimon/wsl/v4 v4.5.0 // indirect
@@ -74,7 +75,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/firefart/nonamedreturns v1.0.5 // indirect
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/ghostiam/protogetter v0.3.9 // indirect
