@@ -639,38 +639,39 @@ This provider supports Okta's OAuth 2.0 implementation with both client secret a
 | `private_key` | RSA private key in PKCS#8 PEM format for Private Key JWT authentication. If provided, this method will be used instead of client secret. | None | No |
 | `scheme` | The URL scheme to use for Okta endpoints | `https` | No |
 
-#### Supported flows
-
-- **Client Credentials** (both client secret and private key JWT authentication)
-- **Authorization Code** (for interactive flows)
-- **Refresh Token**
-
 #### Examples
 
-**Client Secret Authentication:**
-```bash
-$ vault write oauth2/servers/okta-client-secret \
-    provider=okta \
-    provider_options=domain=dev-123456.okta.com \
-    client_id=0oa1234567890abcdef \
-    client_secret=your-client-secret
+Store private key in a file (e.g., private_key.pem), then configure Okta server with private key
 ```
+export OKTA_PRIVATE_KEY=$(cat private_key.pem)
 
-**Private Key JWT Authentication:**
-```bash
-$ vault write oauth2/servers/okta-private-key \
+$ vault write oauth2/servers/okta-example-jwt \
     provider=okta \
     provider_options=domain=dev-123456.okta.com \
-    provider_options=private_key="$(cat private_key.pem)" \
+    provider_options=private_key="$OKTA_PRIVATE_KEY" \
     client_id=0oa1234567890abcdef
+Success! Data written to: oauth2/servers/okta-example-jwt
 ```
 
-#### Notes
+Configure credentials
+```
+$ vault write oauth2/self/my-okta-jwt-auth \
+    server=okta-example-jwt \
+    grant_type=client_credentials \
+    scopes=okta.groups.read
+Success! Data written to: oauth2/self/my-okta-jwt-auth
+```
 
-- Private Key JWT authentication follows RFC 7523 and is more secure than client secret authentication
-- The private key must be in PKCS#8 PEM format
-- JWT assertions are automatically generated with appropriate claims (iss, sub, aud, exp, jti)
-- Default JWT expiration is 1 hour
+```
+$ vault read oauth2/self/my-okta-jwt-auth
+Key             Value
+---             -----
+access_token    eyJraWQiOixxxx
+expire_time     2024-11-05T21:41:13.392595-08:00
+scopes          [okta.groups.read]
+server          okta-example-jwt
+type            Bearer
+```
 
 ### Custom (`custom`)
 
