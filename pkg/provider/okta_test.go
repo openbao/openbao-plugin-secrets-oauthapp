@@ -69,6 +69,19 @@ func TestOktaClientCredentials(t *testing.T) {
 			wantErr:       true,
 			checkRequest:  nil,
 		},
+		{
+			name:          "client secret success",
+			usePrivateKey: false,
+			clientID:      testClientID,
+			clientSecret:  "test-secret",
+			wantErr:       false,
+			checkRequest: func(t *testing.T, r *http.Request) {
+				err := r.ParseForm()
+				require.NoError(t, err)
+				assert.Equal(t, "POST", r.Method)
+				assert.Equal(t, "client_credentials", r.Form.Get("grant_type"))
+			},
+		},
 	}
 
 	for _, tt := range tests {

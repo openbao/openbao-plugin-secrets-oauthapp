@@ -30,6 +30,7 @@ const (
 	OktaProviderV1   = 1
 
 	JWTExpirationTime = time.Hour
+	MaxJWTLifetime    = 24 * time.Hour // Maximum allowed JWT lifetime
 )
 
 func init() {
@@ -56,6 +57,10 @@ type oktaOperations struct {
 func (o *oktaOperations) createClientAssertion() (string, error) {
 	if !o.usePrivateKey || o.privateKey == nil {
 		return "", fmt.Errorf("private key not configured")
+	}
+
+	if o.clientID == "" {
+		return "", fmt.Errorf("client ID is required for JWT assertion")
 	}
 
 	signer, err := jose.NewSigner(
@@ -129,7 +134,7 @@ func (o *oktaOperations) ClientCredentials(ctx context.Context, opts ...ClientCr
 				ErrorDescription string `json:"error_description"`
 			}
 			if err := json.Unmarshal(body, &errResp); err == nil {
-				return nil, fmt.Errorf("authentication failed: %s, %s", errResp.Error, errResp.ErrorDescription)
+				return nil, errmark.MarkUser(fmt.Errorf("authentication failed: %s - %s", errResp.Error, errResp.ErrorDescription))
 			}
 			return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 		}
@@ -263,7 +268,9 @@ func (o *okta) Private(clientID, clientSecret string) PrivateOperations {
 		clientSecret:    clientSecret,
 		privateKey:      o.privateKey,
 		usePrivateKey:   o.usePrivateKey,
-		httpClient:      &http.Client{},
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second, // Add reasonable timeout
+		},
 	}
 }
 
