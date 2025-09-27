@@ -20,6 +20,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 * Add caching of STS-exchanged access.
 * Add dependabot configuration and update dependencies to the latest
   versions.
+* Added Okta provider support with private key JWT authentication
 
 ## [3.1.1] - 2023-02-02
 
