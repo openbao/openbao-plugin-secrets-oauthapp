@@ -625,6 +625,53 @@ This provider implements the OpenID Connect protocol version 1.0.
 
 [Documentation](https://api.slack.com/docs/oauth)
 
+### Okta (`okta`)
+
+[Documentation](https://developer.okta.com/docs/reference/api/oidc/)
+
+This provider supports Okta's OAuth 2.0 implementation with both client secret and private key JWT authentication methods.
+
+#### Configuration options
+
+| Name | Description | Default | Required |
+|------|-------------|---------|----------|
+| `domain` | The Okta domain (e.g., `dev-123456.okta.com`) | None | Yes |
+| `private_key` | RSA private key in PKCS#8 PEM format for Private Key JWT authentication. If provided, this method will be used instead of client secret. | None | No |
+| `scheme` | The URL scheme to use for Okta endpoints | `https` | No |
+
+#### Supported flows
+
+- **Client Credentials** (both client secret and private key JWT authentication)
+- **Authorization Code** (for interactive flows)
+- **Refresh Token**
+
+#### Examples
+
+**Client Secret Authentication:**
+```bash
+$ vault write oauth2/servers/okta-client-secret \
+    provider=okta \
+    provider_options=domain=dev-123456.okta.com \
+    client_id=0oa1234567890abcdef \
+    client_secret=your-client-secret
+```
+
+**Private Key JWT Authentication:**
+```bash
+$ vault write oauth2/servers/okta-private-key \
+    provider=okta \
+    provider_options=domain=dev-123456.okta.com \
+    provider_options=private_key="$(cat private_key.pem)" \
+    client_id=0oa1234567890abcdef
+```
+
+#### Notes
+
+- Private Key JWT authentication follows RFC 7523 and is more secure than client secret authentication
+- The private key must be in PKCS#8 PEM format
+- JWT assertions are automatically generated with appropriate claims (iss, sub, aud, exp, jti)
+- Default JWT expiration is 1 hour
+
 ### Custom (`custom`)
 
 This provider allows you to specify the required endpoints for negotiating an
