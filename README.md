@@ -452,6 +452,12 @@ Remove the credential information from storage. This does not revoke the token,
 so keep in mind that applications may hold any requested access token until its
 expiry.
 
+### `self`
+
+#### `GET` (`list`)
+
+Show the names of all configured client credentials.
+
 ### `self/:name`
 
 This path is for tokens to be obtained using the OAuth 2.0 client credentials

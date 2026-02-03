@@ -24,6 +24,8 @@ type ClientCredsKeyer interface {
 }
 
 type ClientCredsEntry struct {
+	Name string `json:"name"`
+
 	Token *provider.Token `json:"token"`
 
 	// AuthServerName is the authorization server we should use to handle this

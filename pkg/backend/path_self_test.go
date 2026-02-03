@@ -312,3 +312,79 @@ func TestClientCredentialsMaximumExpiry(t *testing.T) {
 		})
 	}
 }
+
+func TestListCredentials(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client := testutil.MockClient{
+		ID:     "abc",
+		Secret: "def",
+	}
+
+	handler := func(opts *provider.ClientCredentialsOptions) (*provider.Token, error) {
+		return &provider.Token{
+			Token: &oauth2.Token{
+				AccessToken: fmt.Sprintf("%s:%s:%s", strings.Join(opts.Scopes, "."), opts.EndpointParams.Get("baz"), opts.ProviderOptions["tenant"]),
+			},
+		}, nil
+	}
+
+	pr := provider.NewRegistry()
+	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithClientCredentials(client, handler)))
+
+	storage := &logical.InmemStorage{}
+
+	b, err := backend.New(backend.Options{ProviderRegistry: pr})
+	require.NoError(t, err)
+	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+
+	// Write server configuration.
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      backend.ServersPathPrefix + `mock`,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"client_id":     client.ID,
+			"client_secret": client.Secret,
+			"provider":      "mock",
+		},
+	}
+
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "response has error: %+v", resp.Error())
+	require.Nil(t, resp)
+
+	credentialNames := []string{"cred1", "cred2", "cred3"}
+
+	// Create multiple credentials
+	for _, credName := range credentialNames {
+		req := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      backend.SelfPathPrefix + credName,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"server": "mock",
+			},
+		}
+
+		resp, err := b.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.False(t, resp != nil && resp.IsError(), "response has error: %+v", resp.Error())
+		require.Nil(t, resp)
+	}
+
+	// Check that we can list the credentials.
+	req = &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      backend.SelfPathPrefix,
+		Storage:   storage,
+	}
+
+	resp, err = b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.False(t, resp.IsError(), "response has error: %+v", resp.Error())
+	require.Equal(t, credentialNames, resp.Data["keys"])
+}

@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -15,6 +16,26 @@ import (
 	"github.com/puppetlabs/leg/timeutil/pkg/clockctx"
 	"golang.org/x/oauth2"
 )
+
+func (b *backend) selfListOperation(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var credentialNames []string
+
+	m := b.data.ClientCreds.Manager(req.Storage)
+	err := m.ForEachClientCredsKey(ctx, func(keyer persistence.ClientCredsKeyer) error {
+		entry, err := m.ReadClientCredsEntry(ctx, keyer)
+		if err != nil {
+			return err
+		}
+		credentialNames = append(credentialNames, entry.Name)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Strings(credentialNames)
+	return logical.ListResponse(credentialNames), nil
+}
 
 func (b *backend) selfReadOperation(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	expiryDelta := time.Duration(data.Get("minimum_seconds").(int)) * time.Second
@@ -87,6 +108,7 @@ func (b *backend) selfUpdateOperation(ctx context.Context, req *logical.Request,
 	defer put()
 
 	entry := &persistence.ClientCredsEntry{
+		Name:                 data.Get("name").(string),
 		AuthServerName:       serverName,
 		MaximumExpirySeconds: data.Get("maximum_expiry_seconds").(int),
 	}
@@ -172,6 +194,20 @@ client credentials flow. Reads from a given path are cached until
 expiration and will be automatically resubmitted to the IdP as
 needed.
 `
+
+func pathSelfList(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: SelfPathPrefix + `?$`,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.selfListOperation,
+				Summary:  "List all credential names.",
+			},
+		},
+		HelpSynopsis:    strings.TrimSpace(selfHelpSynopsis),
+		HelpDescription: strings.TrimSpace(selfHelpDescription),
+	}
+}
 
 func pathSelf(b *backend) *framework.Path {
 	return &framework.Path{
