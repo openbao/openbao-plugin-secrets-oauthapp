@@ -8,6 +8,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-02-05
+
+* Add support for listing the `/self` endpoint.
+* Updated dependencies.
+
 ## [3.2.0] - 2025-02-12
 
 ### Changed
