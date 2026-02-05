@@ -201,7 +201,7 @@ func pathSelfList(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.selfListOperation,
-				Summary:  "List all credential names.",
+				Summary:  "List all client credential names.",
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(selfHelpSynopsis),
