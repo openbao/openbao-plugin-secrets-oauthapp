@@ -1,49 +1,63 @@
-linters-settings:
-  gocritic:
-    enabled-tags:
-    - diagnostic
-    - experimental
-    - opinionated
-    - performance
-    - style
-    disabled-checks:
-    - ifElseChain
-    settings:
-      hugeParam:
-        sizeThreshold: 512
-  gocyclo:
-    min-complexity: 20
-  gosec:
-    excludes:
-      - G115
-  nolintlint:
-    allow-leading-space: true
-    allow-unused: false
-    require-explanation: false
-    require-specific: true
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-  - bodyclose
-  - copyloopvar
-  - errcheck
-  - gocritic
-  - gocyclo
-  - goimports
-  - gosec
-  - gosimple
-  - govet
-  - ineffassign
-  - noctx
-  - nolintlint
-  - staticcheck
-  - typecheck
-  - unused
-
-issues:
-  exclude-rules:
-  - path: _test\.go$
-    linters:
     - bodyclose
+    - copyloopvar
+    - errcheck
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
     - noctx
+    - nolintlint
+    - staticcheck
+    - unused
+  settings:
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      settings:
+        hugeParam:
+          sizeThreshold: 512
+    gocyclo:
+      min-complexity: 20
+    gosec:
+      excludes:
+        - G115
+    nolintlint:
+      require-explanation: false
+      require-specific: true
+      allow-unused: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - noctx
+        path: _test\.go$
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
