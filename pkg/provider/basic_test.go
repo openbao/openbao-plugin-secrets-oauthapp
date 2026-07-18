@@ -16,7 +16,7 @@ import (
 )
 
 var basicTestFactory = provider.BasicFactory(provider.Endpoint{
-	Endpoint: oauth2.Endpoint{
+	Endpoint: oauth2.Endpoint{ //gosec:disable G101 - test only
 		AuthURL:   "http://localhost/authorize",
 		TokenURL:  "http://localhost/token",
 		AuthStyle: oauth2.AuthStyleInParams,

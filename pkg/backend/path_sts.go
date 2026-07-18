@@ -83,9 +83,9 @@ func (b *backend) stsReadOperation(ctx context.Context, req *logical.Request, da
 
 		// copy into smaller struct for caching
 		tok = &oauth2.Token{
-			AccessToken: exchangedTok.Token.AccessToken,
-			TokenType:   exchangedTok.Token.TokenType,
-			Expiry:      exchangedTok.Token.Expiry,
+			AccessToken: exchangedTok.AccessToken,
+			TokenType:   exchangedTok.TokenType,
+			Expiry:      exchangedTok.Expiry,
 		}
 
 		if !tok.Expiry.IsZero() {

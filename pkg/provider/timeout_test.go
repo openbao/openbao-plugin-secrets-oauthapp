@@ -266,7 +266,7 @@ func TestTimeoutProvider(t *testing.T) {
 	})
 
 	factory := provider.BasicFactory(provider.Endpoint{
-		Endpoint: oauth2.Endpoint{
+		Endpoint: oauth2.Endpoint{ //gosec:disable G101 - test only
 			TokenURL:  "http://localhost/token",
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
