@@ -64,24 +64,20 @@ func TestPeriodicRefresh(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, testutil.RestrictMockAuthCodeExchange(exchanges))))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{
-		ProviderRegistry: pr,
-		Clock: clock.NewTimerCallbackClock(
-			k8sext.NewClock(clk),
-			func(d time.Duration) {
-				// Stepping the clock every time a timer is created or reset
-				// guarantees that the normally-delayed timer will immediately
-				// retry over and over.
-				clk.Step(d)
-			},
-		),
-	})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
-	require.NoError(t, b.Initialize(ctx, &logical.InitializationRequest{Storage: storage}))
-	defer b.Cleanup(ctx)
+	b, storage := backend.CreateBackendWithStorage(t,
+		backend.Options{
+			ProviderRegistry: pr,
+			Clock: clock.NewTimerCallbackClock(
+				k8sext.NewClock(clk),
+				func(d time.Duration) {
+					// Stepping the clock every time a timer is created or reset
+					// guarantees that the normally-delayed timer will immediately
+					// retry over and over.
+					clk.Step(d)
+				},
+			),
+		},
+	)
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -171,13 +167,7 @@ func TestTuneRefreshCheckInterval(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, exchange)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
-	require.NoError(t, b.Initialize(ctx, &logical.InitializationRequest{Storage: storage}))
-	defer b.Cleanup(ctx)
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -334,14 +324,7 @@ func TestMinimumSeconds(t *testing.T) {
 			testutil.RestrictMockTokenExchange(tokenExchanges)),
 	))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{
-		ProviderRegistry: pr,
-	})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
-	defer b.Cleanup(ctx)
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -511,16 +494,12 @@ func TestServerDeletedFromUnderCred(t *testing.T) {
 		testutil.MockWithAuthCodeExchange(client2, expire(testutil.IncrementMockAuthCodeExchange("client2_"))),
 	))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{
-		ProviderRegistry: pr,
-		Clock:            k8sext.NewClock(clk),
-	})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
-	require.NoError(t, b.Initialize(ctx, &logical.InitializationRequest{Storage: storage}))
-	defer b.Cleanup(ctx)
+	b, storage := backend.CreateBackendWithStorage(t,
+		backend.Options{
+			ProviderRegistry: pr,
+			Clock:            k8sext.NewClock(clk),
+		},
+	)
 
 	// Write global configuratio to turn off the reaper for creds without
 	// servers, which could fire since we're rapidly incrementing the clock.

@@ -21,11 +21,7 @@ func TestAuthCodeURL(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory())
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{

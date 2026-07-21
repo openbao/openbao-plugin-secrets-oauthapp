@@ -37,11 +37,7 @@ func TestBasicAuthCodeExchange(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, testutil.StaticMockAuthCodeExchange(token))))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -110,11 +106,7 @@ func TestClientSecretsFallback(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, testutil.StaticMockAuthCodeExchange(token))))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -167,11 +159,7 @@ func TestInvalidAuthCodeExchange(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, exchange)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -245,11 +233,7 @@ func TestRefreshableAuthCodeExchange(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, handler)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -332,11 +316,7 @@ func TestRefreshFailureReturnsNotConfigured(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, exchange)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -421,26 +401,22 @@ func TestDeviceCodeAuthAndExchange(t *testing.T) {
 		testutil.MockWithDeviceCodeExchange(client, exchange),
 	))
 
-	storage := &logical.InmemStorage{}
-
 	clk := testclock.NewFakeClock(time.Now())
 
-	b, err := backend.New(backend.Options{
-		ProviderRegistry: pr,
-		Clock: clock.NewTimerCallbackClock(
-			k8sext.NewClock(clk),
-			func(d time.Duration) {
-				// Stepping the clock every time a timer is created or reset
-				// guarantees that the normally-delayed timer will immediately
-				// retry over and over.
-				clk.Step(d)
-			},
-		),
-	})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
-	require.NoError(t, b.Initialize(ctx, &logical.InitializationRequest{Storage: storage}))
-	defer b.Cleanup(ctx)
+	b, storage := backend.CreateBackendWithStorage(t,
+		backend.Options{
+			ProviderRegistry: pr,
+			Clock: clock.NewTimerCallbackClock(
+				k8sext.NewClock(clk),
+				func(d time.Duration) {
+					// Stepping the clock every time a timer is created or reset
+					// guarantees that the normally-delayed timer will immediately
+					// retry over and over.
+					clk.Step(d)
+				},
+			),
+		},
+	)
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -584,14 +560,12 @@ func TestAuthCodeMaximumExpiry(t *testing.T) {
 			pr := provider.NewRegistry()
 			pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, test.ExchangeFunc)))
 
-			storage := &logical.InmemStorage{}
-
-			b, err := backend.New(backend.Options{
-				ProviderRegistry: pr,
-				Clock:            k8sext.NewClock(clk),
-			})
-			require.NoError(t, err)
-			require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+			b, storage := backend.CreateBackendWithStorage(t,
+				backend.Options{
+					ProviderRegistry: pr,
+					Clock:            k8sext.NewClock(clk),
+				},
+			)
 
 			// Write server configuration.
 			req := &logical.Request{
