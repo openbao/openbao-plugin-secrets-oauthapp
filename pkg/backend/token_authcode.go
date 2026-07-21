@@ -9,6 +9,7 @@ import (
 
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/persistence"
 	"github.com/openbao/openbao-plugin-secrets-oauthapp/v3/pkg/provider"
+	"github.com/openbao/openbao/sdk/v2/helper/consts"
 	"github.com/openbao/openbao/sdk/v2/logical"
 	"github.com/puppetlabs/leg/errmap/pkg/errmap"
 	"github.com/puppetlabs/leg/errmap/pkg/errmark"
@@ -159,6 +160,14 @@ func (b *backend) getRefreshCredToken(ctx context.Context, storage logical.Stora
 	case !entry.TokenIssued() || b.tokenValid(entry.Token.Token, expiryDelta):
 		return entry, nil
 	default:
+		// If we're on a standby node, forward to the active before
+		// refreshing. This ensures we don't get rate limited by the token
+		// issuer and limits the number of spurious tokens we get.
+		if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+			(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+			return nil, logical.ErrReadOnly
+		}
+
 		return b.refreshCredToken(ctx, storage, keyer, expiryDelta)
 	}
 }
