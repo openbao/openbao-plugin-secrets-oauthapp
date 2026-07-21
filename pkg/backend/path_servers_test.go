@@ -20,11 +20,7 @@ func TestServerReadWrite(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithVersion(2)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Read configuration; we should be unconfigured at this point.
 	read := &logical.Request{
@@ -115,11 +111,7 @@ func TestMultipleServers(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(opts...))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configurations and credentials.
 	for _, server := range servers {

@@ -36,24 +36,20 @@ func TestPeriodicReap(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithAuthCodeExchange(client, exchange)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{
-		ProviderRegistry: pr,
-		Clock: clock.NewTimerCallbackClock(
-			k8sext.NewClock(clk),
-			func(d time.Duration) {
-				// Stepping the clock every time a timer is created or reset
-				// guarantees that the normally-delayed timer will immediately
-				// retry over and over.
-				clk.Step(d)
-			},
-		),
-	})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
-	require.NoError(t, b.Initialize(ctx, &logical.InitializationRequest{Storage: storage}))
-	defer b.Cleanup(ctx)
+	b, storage := backend.CreateBackendWithStorage(t,
+		backend.Options{
+			ProviderRegistry: pr,
+			Clock: clock.NewTimerCallbackClock(
+				k8sext.NewClock(clk),
+				func(d time.Duration) {
+					// Stepping the clock every time a timer is created or reset
+					// guarantees that the normally-delayed timer will immediately
+					// retry over and over.
+					clk.Step(d)
+				},
+			),
+		},
+	)
 
 	// Write configuration.
 	req := &logical.Request{

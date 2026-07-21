@@ -37,11 +37,7 @@ func TestClientCredentials(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithClientCredentials(client, handler)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -122,11 +118,7 @@ func TestExpiredClientCredentials(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithClientCredentials(client, handler)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
@@ -243,14 +235,12 @@ func TestClientCredentialsMaximumExpiry(t *testing.T) {
 			pr := provider.NewRegistry()
 			pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithClientCredentials(client, test.ExchangeFunc)))
 
-			storage := &logical.InmemStorage{}
-
-			b, err := backend.New(backend.Options{
-				ProviderRegistry: pr,
-				Clock:            k8sext.NewClock(clk),
-			})
-			require.NoError(t, err)
-			require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+			b, storage := backend.CreateBackendWithStorage(t,
+				backend.Options{
+					ProviderRegistry: pr,
+					Clock:            k8sext.NewClock(clk),
+				},
+			)
 
 			// Write server configuration.
 			req := &logical.Request{
@@ -333,11 +323,7 @@ func TestListCredentials(t *testing.T) {
 	pr := provider.NewRegistry()
 	pr.MustRegister("mock", testutil.MockFactory(testutil.MockWithClientCredentials(client, handler)))
 
-	storage := &logical.InmemStorage{}
-
-	b, err := backend.New(backend.Options{ProviderRegistry: pr})
-	require.NoError(t, err)
-	require.NoError(t, b.Setup(ctx, &logical.BackendConfig{StorageView: storage}))
+	b, storage := backend.CreateBackendWithStorage(t, backend.Options{ProviderRegistry: pr})
 
 	// Write server configuration.
 	req := &logical.Request{
