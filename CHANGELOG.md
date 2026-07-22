@@ -8,10 +8,16 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-07-22
+
+* Ensure that tokens are only refreshed on the active node in a cluster.
+* Update to minimum go of 1.25.0.
+* Update dependencies.
+
 ## [3.3.0] - 2026-02-05
 
 * Add support for listing the `/self` endpoint.
-* Updated dependencies.
+* Update dependencies.
 
 ## [3.2.0] - 2025-02-12
 
