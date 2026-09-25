@@ -8,6 +8,11 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.4.1] - 2026-09-25
+
+* Update sdk used to 2.6.3.
+* Update to minimum go of 1.26.0.
+
 ## [3.4.0] - 2026-07-22
 
 * Ensure that tokens are only refreshed on the active node in a cluster.
