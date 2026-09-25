@@ -8,6 +8,14 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+* Publish an OCI image for each release, for `linux/amd64` and `linux/arm64`,
+  for use with OpenBao's declarative plugin configuration (the `plugin`
+  stanza).
+* Publish the SHA-256 checksum of each release binary, as well as of each
+  archive.
+
 ## [3.4.0] - 2026-07-22
 
 * Ensure that tokens are only refreshed on the active node in a cluster.

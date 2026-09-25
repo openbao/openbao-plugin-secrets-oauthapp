@@ -22,6 +22,12 @@ jobs:
       id: read-changelog
       with:
         version: ${{ steps.get-tag-version.outputs.result }}
+    - name: Get release status
+      id: get-release-status
+      env:
+        DRAFT: ${{ steps.read-changelog.outputs.status == 'unreleased' }}
+      run: |
+        echo "draft=${DRAFT}" >>"$GITHUB_OUTPUT"
     - uses: actions/create-release@v1
       id: create-release
       env:
@@ -31,9 +37,10 @@ jobs:
         release_name: v${{ steps.read-changelog.outputs.version }}
         body: ${{ steps.read-changelog.outputs.changes }}
         prerelease: ${{ steps.read-changelog.outputs.status == 'prereleased' }}
-        draft: ${{ steps.read-changelog.outputs.status == 'unreleased' }}
+        draft: ${{ steps.get-release-status.outputs.draft }}
     outputs:
       upload-url: ${{ steps.create-release.outputs.upload_url }}
+      draft: ${{ steps.get-release-status.outputs.draft }}
   release-assets:
     needs: create-release
     runs-on: ubuntu-latest
@@ -98,11 +105,18 @@ jobs:
         checksum_name="${archive_name}.sha256.asc"
         checksum_media_type="$( file -b --mime-type "./artifacts/${checksum_name}" )"
 
+        binary_checksum_name="$( find ./artifacts/ -type f -name '*.sha256.asc' -not -name "${checksum_name}" -printf '%f\n' )"
+        test -f "./artifacts/${binary_checksum_name}"
+        binary_checksum_media_type="$( file -b --mime-type "./artifacts/${binary_checksum_name}" )"
+
         echo "archive-name=${archive_name}" >>"$GITHUB_OUTPUT"
         echo "archive-media-type=${archive_media_type}" >>"$GITHUB_OUTPUT"
 
         echo "checksum-name=${checksum_name}" >>"$GITHUB_OUTPUT"
         echo "checksum-media-type=${checksum_media_type}" >>"$GITHUB_OUTPUT"
+
+        echo "binary-checksum-name=${binary_checksum_name}" >>"$GITHUB_OUTPUT"
+        echo "binary-checksum-media-type=${binary_checksum_media_type}" >>"$GITHUB_OUTPUT"
     - name: Upload checksum asset
       uses: actions/upload-release-asset@v1
       env:
@@ -112,6 +126,15 @@ jobs:
         asset_path: ./artifacts/${{ steps.get-asset-information.outputs.checksum-name }}
         asset_name: ${{ steps.get-asset-information.outputs.checksum-name }}
         asset_content_type: ${{ steps.get-asset-information.outputs.checksum-media-type }}
+    - name: Upload binary checksum asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload-url }}
+        asset_path: ./artifacts/${{ steps.get-asset-information.outputs.binary-checksum-name }}
+        asset_name: ${{ steps.get-asset-information.outputs.binary-checksum-name }}
+        asset_content_type: ${{ steps.get-asset-information.outputs.binary-checksum-media-type }}
     - name: Upload archive asset
       uses: actions/upload-release-asset@v1
       env:
@@ -121,3 +144,52 @@ jobs:
         asset_path: ./artifacts/${{ steps.get-asset-information.outputs.archive-name }}
         asset_name: ${{ steps.get-asset-information.outputs.archive-name }}
         asset_content_type: ${{ steps.get-asset-information.outputs.archive-media-type }}
+    # Keep the archives, so that release-image builds the image from the same
+    # binaries as the release rather than building them again.
+    - name: Save artifacts for image
+      uses: actions/upload-artifact@v7
+      with:
+        name: dist-${{ matrix.os }}-${{ matrix.arch }}
+        path: ./artifacts/
+  # Pushes ghcr.io/<repository>:<tag>. The first push creates the package. If
+  # it is created private, an organisation owner must make it public in the
+  # package settings, as OpenBao pulls the image without credentials.
+  #
+  # The image is not pushed for a draft release. To push it later, or after the
+  # workflow artifacts have expired, build it from the published release:
+  #
+  #   gh release download <tag> -D artifacts -p '*-linux-amd64*' -p '*-linux-arm64*'
+  #   make image PLUGIN_DIST_VERSION=<tag>
+  #   buildah login ghcr.io
+  #   make image-push PLUGIN_DIST_VERSION=<tag>
+  release-image:
+    needs: [create-release, release-assets]
+    if: needs.create-release.outputs.draft != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: dist-linux-*
+        path: ./artifacts/
+        merge-multiple: true
+    - name: Install buildah
+      run: |
+        sudo apt-get -y update
+        sudo apt-get -y install buildah
+    - name: Build and check image
+      run: |
+        make image IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}" PLUGIN_DIST_VERSION="${GITHUB_REF_NAME}"
+    - name: Log in to the container registry
+      env:
+        REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        printf '%s' "${REGISTRY_PASSWORD}" | buildah login --username "${GITHUB_ACTOR}" --password-stdin ghcr.io
+    - name: Push image
+      run: |
+        make image-push IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY,,}" PLUGIN_DIST_VERSION="${GITHUB_REF_NAME}"

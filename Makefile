@@ -2,8 +2,10 @@
 # Commands
 #
 
+export BUILDAH ?= buildah
 export GIT ?= git
 export GO ?= go
+export JQ ?= jq
 export MKDIR_P ?= mkdir -p
 export RM ?= rm -f
 export SHA256SUM ?= shasum -a 256
@@ -18,6 +20,13 @@ export ZIP_M ?= zip -m
 export GOFLAGS ?=
 
 PLUGIN_DIST_TARGETS ?= $(addprefix dist-bin-,darwin-amd64 darwin-arm64 windows-amd64 windows-386 linux-amd64 linux-386 linux-arm64 linux-arm freebsd-amd64 freebsd-386 freebsd-arm netbsd-amd64 netbsd-386 openbsd-amd64 openbsd-386 solaris-amd64)
+
+# Platforms of the OCI image. The arm64 variant must be explicit: OpenBao asks
+# the registry for linux/arm64/v8 on arm64 hosts.
+IMAGE_PLATFORMS ?= linux/amd64 linux/arm64/v8
+IMAGE_NAME ?= ghcr.io/openbao/openbao-plugin-secrets-oauthapp
+# The dist-bin-<os>-<arch> targets that build the binaries for IMAGE_PLATFORMS.
+IMAGE_DIST_TARGETS = $(foreach p,$(IMAGE_PLATFORMS),dist-bin-$(word 1,$(subst /, ,$(p)))-$(word 2,$(subst /, ,$(p))))
 
 #
 #
@@ -57,6 +66,20 @@ test: generate
 
 .PHONY: dist
 dist: $(PLUGIN_DIST_TARGETS)
+
+.PHONY: image-dist
+image-dist: $(IMAGE_DIST_TARGETS)
+
+# Builds the image from the release archives in ARTIFACTS_DIR, so run `make
+# image-dist` (or `make dist`) first.
+.PHONY: image
+image:
+	scripts/image $(PLUGIN_DIST_NAME) $(PLUGIN_DIST_VERSION) $(IMAGE_NAME):$(PLUGIN_DIST_VERSION) $(IMAGE_PLATFORMS)
+	scripts/check-image $(PLUGIN_DIST_NAME) $(PLUGIN_DIST_VERSION) $(IMAGE_NAME):$(PLUGIN_DIST_VERSION) $(IMAGE_PLATFORMS)
+
+.PHONY: image-push
+image-push:
+	$(BUILDAH) manifest push --all $(IMAGE_NAME):$(PLUGIN_DIST_VERSION) docker://$(IMAGE_NAME):$(PLUGIN_DIST_VERSION)
 
 .PHONY: clean
 clean:

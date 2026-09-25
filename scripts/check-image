@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+#
+# Commands
+#
+
+BUILDAH="${BUILDAH:-buildah}"
+JQ="${JQ:-jq}"
+TAR="${TAR:-tar}"
+SHA256SUM="${SHA256SUM:-shasum -a 256}"
+
+#
+# Variables
+#
+
+ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts}"
+
+#
+# Checks the manifest list built by scripts/image against what OpenBao needs to
+# download the plugin from it (see the `plugin` stanza in the OpenBao server
+# configuration documentation):
+#
+# * an image for each expected platform, with arm64 images carrying the v8
+#   variant, as OpenBao asks the registry for linux/arm64/v8 on arm64 hosts;
+# * the plugin binary as the only file, at the root of the image;
+# * an entrypoint naming the binary, from which OpenBao can infer `binary_name`;
+# * a binary matching the published checksum, which is what users put in
+#   `sha256sum`.
+#
+
+if [ "$#" -lt 4 ]; then
+  echo "usage: $0 <name> <version> <image> <platform>..." >&2
+  exit 1
+fi
+
+dist_name="$1"
+dist_version="$2"
+image="$3"
+shift 3
+
+errors=0
+
+fail() {
+  echo "check-image: $*" >&2
+  errors=$(( errors + 1 ))
+}
+
+layout="$( mktemp -d )"
+trap 'rm -rf "${layout}"' EXIT
+
+$BUILDAH manifest push --all --quiet "${image}" "oci:${layout}:check"
+
+blob() {
+  printf '%s/blobs/%s' "${layout}" "${1/://}"
+}
+
+list="$( blob "$( $JQ -r '.manifests[0].digest' "${layout}/index.json" )" )"
+
+expected="$( printf '%s\n' "$@" | sort )"
+actual="$( $JQ -r '.manifests[].platform | [.os, .architecture, .variant // empty] | join("/")' "${list}" | sort )"
+if [ "${actual}" != "${expected}" ]; then
+  fail "platforms are [${actual//$'\n'/ }], expected [${expected//$'\n'/ }]"
+fi
+
+while read -r digest platform; do
+  echo "check-image: ${platform}"
+
+  manifest="$( blob "${digest}" )"
+  config="$( blob "$( $JQ -r '.config.digest' "${manifest}" )" )"
+
+  case "${platform}" in
+  */arm64 | */arm64/*)
+    if [[ "${platform}" != */arm64/v8 ]]; then
+      fail "${platform}: arm64 images must have the v8 variant, or OpenBao cannot select them"
+    fi
+    ;;
+  esac
+
+  entrypoint="$( $JQ -c '.config.Entrypoint' "${config}" )"
+  if [ "${entrypoint}" != "[\"/${dist_name}\"]" ]; then
+    fail "${platform}: entrypoint is ${entrypoint}, expected [\"/${dist_name}\"]"
+  fi
+
+  files=()
+  for layer in $( $JQ -r '.layers[].digest' "${manifest}" ); do
+    while read -r file; do
+      files+=( "${file#./}" )
+    done < <( $TAR -tf "$( blob "${layer}" )" )
+  done
+  if [ "${files[*]}" != "${dist_name}" ]; then
+    fail "${platform}: image contains [${files[*]}], expected only [${dist_name}]"
+    continue
+  fi
+
+  target="$( printf '%s' "${platform}" | cut -d/ -f1-2 | tr / - )"
+  want="$( cut -d' ' -f1 "${ARTIFACTS_DIR}/${dist_name}-${dist_version}-${target}.sha256.asc" )"
+  have="$( $TAR -xOf "$( blob "$( $JQ -r '.layers[-1].digest' "${manifest}" )" )" | $SHA256SUM | cut -d' ' -f1 )"
+  if [ "${have}" != "${want}" ]; then
+    fail "${platform}: binary checksum is ${have}, expected ${want} from the release"
+  fi
+done < <( $JQ -r '.manifests[] | [.digest, ([.platform.os, .platform.architecture, .platform.variant // empty] | join("/"))] | @tsv' "${list}" )
+
+if [ "${errors}" -gt 0 ]; then
+  echo "check-image: ${errors} problem(s) found in ${image}" >&2
+  exit 1
+fi
+
+echo "check-image: ${image} OK"

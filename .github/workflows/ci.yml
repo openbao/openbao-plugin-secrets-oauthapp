@@ -53,3 +53,26 @@ jobs:
           ${{ runner.os }}-go-
     - name: Test
       run: make test
+  image:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/go/pkg/sumdb
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Install buildah
+      run: |
+        sudo apt-get -y update
+        sudo apt-get -y install buildah
+    - name: Build
+      run: make image-dist
+    - name: Build and check image
+      run: make image

@@ -60,6 +60,10 @@ echo "dist: GOFLAGS=$( $GO env GOFLAGS )"
 (
   cd "${ARTIFACTS_DIR}"
 
+  # The checksum of the binary itself, for configurations that verify the
+  # extracted plugin (such as OpenBao's `sha256sum` plugin setting).
+  ( set -x; $SHA256SUM "${bin}" >"${bin}.sha256.asc" )
+
   case "${archive_ext}" in
   .tar.xz)
     ( set -x; $TAR -cJ --remove-files -f "${archive}" "${bin}" )

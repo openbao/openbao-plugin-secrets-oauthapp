@@ -12,10 +12,71 @@ token, device code, and client credentials grant types, allowing a Vault client
 to request authorization on behalf of a user and perform actions using a
 negotiated OAuth 2 access token.
 
+## Installation
+
+Each [release](https://github.com/openbao/openbao-plugin-secrets-oauthapp/releases)
+provides:
+
+* An archive of the plugin binary for each supported platform, with the
+  SHA-256 checksum of the archive in `<archive>.sha256.asc`.
+* The SHA-256 checksum of the binary inside each archive, in
+  `openbao-plugin-secrets-oauthapp-<version>-<os>-<arch>.sha256.asc` (with
+  `.exe` before `.sha256.asc` on Windows). This is the checksum that plugin
+  registration expects.
+* An OCI image, `ghcr.io/openbao/openbao-plugin-secrets-oauthapp:<version>`,
+  for `linux/amd64` and `linux/arm64`, containing only the plugin binary.
+
+The binary checksums and the OCI image are published for releases after
+v3.4.0.
+
+### OpenBao declarative plugins
+
+OpenBao 2.5 and later can download the plugin from the OCI image and register
+it at startup, using the [`plugin`
+stanza](https://openbao.org/docs/configuration/plugins/) in the server
+configuration:
+
+```hcl
+plugin_directory     = "/path/to/plugins"
+plugin_auto_download = true
+plugin_auto_register = true
+
+plugin "secret" "oauthapp" {
+  image       = "ghcr.io/openbao/openbao-plugin-secrets-oauthapp"
+  version     = "<version>"
+  binary_name = "openbao-plugin-secrets-oauthapp"
+  sha256sum   = "<checksum of the binary>"
+}
+```
+
+* `version` is the release tag, including the leading `v` (for example
+  `v3.5.0`). OpenBao uses it as the image tag.
+* `sha256sum` is the checksum of the *binary* for the server's platform: the
+  first field of the release's
+  `openbao-plugin-secrets-oauthapp-<version>-linux-<arch>.sha256.asc`, not the
+  checksum of the archive. It differs between `amd64` and `arm64`.
+* `binary_name` is required by OpenBao 2.5 and 2.6. OpenBao 2.7 and later
+  infer it from the image, so it may be omitted.
+
+With OpenBao 2.7 and later, you can instead pin the image by digest and omit
+`sha256sum`. Use the digest of the multi-platform image index, which covers
+both architectures, so that the same configuration works on `amd64` and
+`arm64` servers; the digest of a single-platform image works only on that
+platform. `crane digest <image>:<version>` prints the index digest, including
+its `sha256:` prefix, as does the `Digest` line at the top of `docker buildx
+imagetools inspect <image>:<version>`.
+
+```hcl
+plugin "secret" "oauthapp" {
+  image   = "ghcr.io/openbao/openbao-plugin-secrets-oauthapp@<digest>"
+  version = "<version>"
+}
+```
+
 ## Usage
 
-Once you have the binary, you will need to register the plugin with Vault
-or OpenBao.
+Once you have installed the binary, you will need to register the plugin with
+Vault or OpenBao (unless OpenBao registers it for you, as above).
 Follow [the instructions in the Vault
 documentation](https://www.vaultproject.io/docs/internals/plugins.html#plugin-registration)
 or [OpenBao

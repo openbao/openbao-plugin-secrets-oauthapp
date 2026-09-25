@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+#
+# Commands
+#
+
+BUILDAH="${BUILDAH:-buildah}"
+MKDIR_P="${MKDIR_P:-mkdir -p}"
+RM="${RM:-rm -f}"
+TAR="${TAR:-tar}"
+SHA256SUM="${SHA256SUM:-shasum -a 256}"
+
+#
+# Variables
+#
+
+ARTIFACTS_DIR="${ARTIFACTS_DIR:-artifacts}"
+
+#
+# Builds the OCI image as a local manifest list named <image>, one image per
+# <os>/<arch>[/<variant>] platform, from the release archives built by
+# scripts/dist. Using the archives rather than a fresh build means the image
+# carries the same binaries, with the same published checksums, as the release.
+#
+
+if [ "$#" -lt 4 ]; then
+  echo "usage: $0 <name> <version> <image> <platform>..." >&2
+  exit 1
+fi
+
+dist_name="$1"
+dist_version="$2"
+image="$3"
+shift 3
+
+context_dir="${ARTIFACTS_DIR}/image"
+
+$RM -r "${context_dir}"
+
+for platform in "$@"; do
+  # The Containerfile copies from <os>-<arch>, per TARGETOS and TARGETARCH.
+  target="$( printf '%s' "${platform}" | cut -d/ -f1-2 | tr / - )"
+  bin="${dist_name}-${dist_version}-${target}"
+  checksum="$( cd "${ARTIFACTS_DIR}" && pwd )/${bin}.sha256.asc"
+  target_dir="${context_dir}/${target}"
+
+  echo "image: ${platform}"
+
+  $MKDIR_P "${target_dir}"
+  ( set -x; $TAR -xJf "${ARTIFACTS_DIR}/${bin}.tar.xz" -C "${target_dir}" "${bin}" )
+  ( set -x; cd "${target_dir}" && $SHA256SUM -c "${checksum}" )
+  mv "${target_dir}/${bin}" "${target_dir}/${dist_name}"
+done
+
+# Start from an empty manifest list, so that rebuilding does not add to the
+# images left over from a previous build.
+$BUILDAH manifest rm "${image}" >/dev/null 2>&1 || true
+
+for platform in "$@"; do
+  ( set -x; $BUILDAH build --file Containerfile --platform "${platform}" --manifest "${image}" "${context_dir}" )
+done
